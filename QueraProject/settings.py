@@ -11,10 +11,18 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
+from datetime import timedelta
+
+
+def get_boolean_from_env(env_var, default="False"):
+    value = os.environ.get(env_var, default=default).lower()
+    if value != "true" and value != "false":
+        raise Exception(f"env {env_var} with value {value} is not boolean")
+    return os.environ.get(env_var, default=default).lower() == "true"
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -23,10 +31,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(tmz5$#7@_c$dhad)s_0-2v#@od27w+-jfzv7$kueqv17nl76)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = get_boolean_from_env("DEBUG", default="False")
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split()
 
 # Application definition
 
@@ -37,7 +44,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'account',
+    'store',
+    'drf_yasg'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -70,19 +93,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'QueraProject.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.' + str(os.environ.get('DB_ENGINE', 'sqlite3')),
-            'NAME': os.environ.get('DB_NAME', 'quera'),
-            'USER': os.environ.get('DB_USER', 'quera'),
-            'PASSWORD': os.environ.get('DB_PASS', 'quera123'),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '3306'),
-        }
+    'default': {
+        'ENGINE': 'mysql.connector.django',
+        'NAME': os.environ.get('DB_NAME', 'quera'),
+        'USER': os.environ.get('DB_USER', 'quera'),
+        'PASSWORD': os.environ.get('DB_PASS', 'quera123'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+    }
 }
 
 # Password validation
@@ -103,7 +125,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -115,13 +136,14 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'account.UserAccount'
